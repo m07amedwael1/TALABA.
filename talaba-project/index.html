@@ -1,0 +1,506 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                        talaba.                             ║
+  ║         University Marketplace — Mansoura & Delta Region  ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  STRUCTURE                                                 ║
+  ║  ─────────────────────────────────────────────────────     ║
+  ║  1. <head>   — meta, fonts, icons CDN                     ║
+  ║  2. <style>  — all CSS (2300+ lines)                      ║
+  ║     ├─ Root variables & base                              ║
+  ║     ├─ Header, Filter, Cards, Product Detail              ║
+  ║     ├─ Cart, Checkout, Auth Modal                         ║
+  ║     ├─ Profile, Dashboard, Vendor Dashboard               ║
+  ║     ├─ Footer                                             ║
+  ║     └─ Responsive breakpoints (mobile / tablet)          ║
+  ║  3. <body>   — HTML structure (static pages + modals)     ║
+  ║  4. <script> — all JS (2400+ lines)                       ║
+  ║     ├─ Mock data (60 products)                            ║
+  ║     ├─ Filter & pagination logic                          ║
+  ║     ├─ Pages: Home, WL, Cart, Checkout, PD               ║
+  ║     ├─ Auth modal (IIFE)                                  ║
+  ║     ├─ Profile, Student Dashboard, Vendor Dashboard       ║
+  ║     └─ Router (browser history / back button)            ║
+  ║                                                            ║
+  ║  USERS                                                     ║
+  ║  ─────────────────────────────────────────────────────     ║
+  ║  Student  → browse, buy (cart), wishlist, list used tools ║
+  ║  Vendor   → add/edit products, manage orders              ║
+  ║  Guest    → browse only (auth required for actions)       ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>talaba</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- في الـ <head> بعد style.css -->
+<link rel="stylesheet" href="banner.css">
+
+
+  
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css"/>
+</head>
+<body>
+<!-- ════════════════════════════════════════════
+     HTML — PAGE STRUCTURE
+     الصفحات والـ modals الثابتة — المحتوى الديناميكي بيتبنى بـ JS
+     Pages: Home(Explore), Product Detail, Wishlist, Cart, Checkout
+     Modals: Auth, Order Success
+     Layouts: Dashboard (Student + Vendor), Profile
+════════════════════════════════════════════ -->
+<header>
+  <div class="hdr-inner">
+    <button class="logo" onclick="showHome()">talaba.</button>
+
+    <!-- Search bar (desktop/tablet) -->
+    <div class="hdr-search" id="hdrSearchBar">
+      <input type="text" placeholder="Search ..." oninput="F.search=this.value.toLowerCase();applyFilters()"/>
+      <span class="s-ico"><i class="ph ph-magnifying-glass" style="font-size:15px"></i></span>
+    </div>
+
+    <div class="hdr-right">
+      <!-- Search icon (mobile only) -->
+      <button class="hdr-icon-btn hdr-mob-only" onclick="openMobSearch()">
+        <i class="ph ph-magnifying-glass" style="font-size:18px"></i>
+      </button>
+
+      <!-- Wishlist -->
+      <button class="hdr-icon-btn" id="wishBtn" onclick="openWL()">
+        <i class="ph ph-heart" style="font-size:18px"></i>
+        <span class="hdr-icon-label">Wishlist</span>
+        <span class="hdr-pip" id="wishPip">0</span>
+      </button>
+
+      <!-- Cart -->
+      <button class="hdr-icon-btn" id="cartBtn" onclick="openCart()">
+        <i class="ph ph-shopping-cart" style="font-size:18px"></i>
+        <span class="hdr-icon-label">Cart</span>
+        <span class="hdr-pip" id="cartPip">0</span>
+      </button>
+
+      <!-- Profile -->
+      <button class="hdr-icon-btn" id="hdrProfileBtn" onclick="hdrProfileClick()">
+        <i class="ph ph-user" id="hdrProfileIco" style="font-size:18px"></i>
+        <span class="hdr-icon-label" id="hdrProfileLabel">Sign In</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+
+<!-- ═══ Floating Action Button ═══ -->
+<button class="fab-btn" id="fabBtn" onclick="mobPlusAction()">
+  <i class="ph ph-plus" style="font-size:24px"></i>
+</button>
+
+<!-- ═══════ EXPLORE BAR ═══════ -->
+<div class="explore-wrap">
+  <div class="explore-inner">
+    <div class="explore-left" style="flex:1;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h1 class="explore-title" id="exploreTitle">Explore</h1>
+        <span class="explore-count" style="display:flex;align-items:center;gap:6px">
+          <span style="width:4px;height:4px;border-radius:50%;background:currentColor;opacity:0.4;flex-shrink:0"></span>
+          <span id="exploreCount">1234</span> items selected
+        </span>
+      </div>
+      <!-- Sort dropdown -->
+      <div class="simple-drop-wrap" id="sortWrap">
+        <button class="sort-icon-btn" onclick="toggleDrop('sortWrap')" title="Sort" id="sortIconBtn">
+          <i class="ph ph-sort-ascending" style="font-size:17px"></i>
+        </button>
+        <div class="simple-drop-menu" id="menuSort" onclick="event.stopPropagation()">
+          <div class="simple-drop-opt on" onclick="setSort('Recently added',this)">Recently added</div>
+          <div class="simple-drop-opt" onclick="setSort('Price: Low to High',this)">Price: Low to High</div>
+          <div class="simple-drop-opt" onclick="setSort('Price: High to Low',this)">Price: High to Low</div>
+          <div class="simple-drop-opt" onclick="setSort('Most Popular',this)">Most Popular</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════ FILTER BAR ═══════ -->
+<div class="filter-section">
+  <div class="filter-row-simple">
+
+    <!-- Toggle Used / New -->
+    <div class="toggle-group">
+      <button class="toggle-pill active" id="btnNew" onclick="setCond('New')">New</button>
+      <button class="toggle-pill" id="btnUsed" onclick="setCond('Used')">Used</button>
+    </div>
+
+    <!-- University dropdown -->
+    <div class="simple-drop-wrap" id="uniWrap">
+      <button class="simple-drop-btn" onclick="toggleDrop('uniWrap')">
+        <span id="valUni">All Universities</span>
+        <i class="ph ph-caret-down" style="font-size:12px"></i>
+      </button>
+      <div class="simple-drop-menu" id="menuUni" onclick="event.stopPropagation()">
+        <div class="simple-drop-opt on" onclick="setUni('All Universities',this)">All Universities</div>
+        <div class="simple-drop-opt" onclick="setUni('Mansoura University',this)">Mansoura University</div>
+        <div class="simple-drop-opt" onclick="setUni('Mansoura National University',this)">Mansoura National</div>
+        <div class="simple-drop-opt" onclick="setUni('New Mansoura University',this)">New Mansoura</div>
+        <div class="simple-drop-opt" onclick="setUni('Horus University',this)">Horus University</div>
+        <div class="simple-drop-opt" onclick="setUni('Delta University',this)">Delta University</div>
+        <div class="simple-drop-opt" onclick="setUni('Salab Institute',this)">Salab Institute</div>
+      </div>
+    </div>
+
+    <!-- College dropdown -->
+    <div class="simple-drop-wrap" id="collegeWrap">
+      <button class="simple-drop-btn" onclick="toggleDrop('collegeWrap')">
+        <span id="valCollege">All Colleges</span>
+        <i class="ph ph-caret-down" style="font-size:12px"></i>
+      </button>
+      <div class="simple-drop-menu" id="menuCollege" onclick="event.stopPropagation()" style="right:0;left:auto;">
+        <div class="simple-drop-opt on" onclick="setCollege('All Colleges',this)">All Colleges</div>
+        <div class="simple-drop-opt" onclick="setCollege('Engineering',this)">Engineering</div>
+        <div class="simple-drop-opt" onclick="setCollege('Medicine',this)">Medicine</div>
+        <div class="simple-drop-opt" onclick="setCollege('Dentistry',this)">Dentistry</div>
+        <div class="simple-drop-opt" onclick="setCollege('Architecture',this)">Architecture</div>
+        <div class="simple-drop-opt" onclick="setCollege('Pharmacy',this)">Pharmacy</div>
+        <div class="simple-drop-opt" onclick="setCollege('Computer Science',this)">Computer Science</div>
+      </div>
+    </div>
+  </div>
+</div><!-- /filter-section -->
+
+<div class="cards-wrap"><div class="cards-grid" id="cardsGrid"></div></div>
+<div class="loadmore-wrap" id="loadmoreWrap">
+  <div class="loadmore-info">Showing <span id="lmShown">0</span> of <span id="lmTotal">0</span> items</div>
+  <div class="loadmore-bar"><div class="loadmore-bar-fill" id="lmBarFill"></div></div>
+  <button class="loadmore-btn" id="lmBtn" onclick="loadMore()">
+    <span class="spin"></span>
+    <span class="btn-txt">Load more</span>
+  </button>
+</div>
+
+
+<!-- ═══════ PRODUCT DETAIL PAGE ═══════ -->
+<div id="pdPage">
+  <div class="pd-wrap">
+
+    <button class="pd-back" onclick="closePD()">
+      <i class="ph ph-arrow-left" style="font-size:16px"></i>
+      Back to listings
+    </button>
+
+    <div class="pd-grid">
+
+      <!-- Gallery -->
+      <div class="pd-gallery">
+        <div class="pd-main-img">
+          <img id="pdMainImg" src="" alt=""/>
+        </div>
+        <div class="pd-thumbs" id="pdThumbs"></div>
+      </div>
+
+      <!-- Info -->
+      <div class="pd-info">
+
+        <!-- Seller + badge -->
+        <div class="pd-seller-row">
+          <div class="pd-seller-av" id="pdSellerAv"></div>
+          <span class="pd-seller-name" id="pdSellerName"></span>
+          <span class="pd-seller-badge" id="pdBadge"></span>
+        </div>
+
+        <!-- Title -->
+        <h1 class="pd-title" id="pdTitle"></h1>
+
+        <!-- Description (right under title) -->
+        <p class="pd-desc-text" id="pdDesc"></p>
+
+        <div class="pd-divider"></div>
+
+        <!-- Price -->
+        <div class="pd-price-block" id="pdPriceBlock"></div>
+
+        <!-- Stats row -->
+        <div class="pd-stats" id="pdStats"></div>
+
+        <div class="pd-divider"></div>
+
+        <!-- Actions -->
+        <div class="pd-actions" id="pdActions"></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ WISHLIST PAGE ═══════ -->
+<div id="wlPage" style="display:none">
+  <div class="pd-wrap">
+    <button class="pd-back" onclick="closeWL()">
+      <i class="ph ph-arrow-left" style="font-size:16px"></i>
+      Back to listings
+    </button>
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:28px">
+      <h1 style="font-size:28px;font-weight:700;color:var(--text)">Wishlist</h1>
+      <span style="font-size:14px;color:#555" id="wlCount">0 items</span>
+    </div>
+    <div class="cards-grid" id="wlGrid"></div>
+    <div id="wlEmpty" style="display:none;text-align:center;padding:80px 20px">
+      <i class="ph ph-heart" style="font-size:48px;color:#333;margin-bottom:16px;display:block"></i>
+      <p style="font-size:15px;color:#555">No saved items yet.<br>Heart a product to save it here.</p>
+      <button class="pd-btn pd-btn-primary" style="width:auto;padding:0 28px;margin:40px auto 0;display:flex" onclick="closeWL()">Browse Products</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ CART PAGE ═══════ -->
+<div class="co-page" id="cartPage">
+  <div class="co-wrap">
+    <button class="pd-back" onclick="closeCart()">
+      <i class="ph ph-arrow-left" style="font-size:16px"></i>
+      Back to listings
+    </button>
+    <h1 class="co-page-title">My Cart</h1>
+    <div id="cartBody"></div>
+  </div>
+</div>
+
+<!-- ═══════ CHECKOUT PAGE ═══════ -->
+<div class="co-page" id="checkoutPage">
+  <div class="co-wrap">
+    <button class="pd-back" onclick="openCart()">
+      <i class="ph ph-arrow-left" style="font-size:16px"></i>
+      Back to cart
+    </button>
+    <h1 class="co-page-title">Checkout</h1>
+    <div id="checkoutBody"></div>
+  </div>
+</div>
+
+
+
+
+<!-- ════ DASHBOARD PAGE ════ -->
+<div id="dashPage">
+  <!-- Student layout -->
+  <div id="dashStudent" class="dash-simple-wrap">
+    <button class="dash-simple-back" onclick="closeDash()">
+      <i class="ph ph-arrow-left" style="font-size:15px"></i>
+      Back
+    </button>
+    <div class="dash-simple-grid">
+      <div class="dash-simple-card">
+        <div class="dash-simple-card-hdr">
+          <i class="ph ph-plus" style="font-size:15px"></i>
+          List a Used Tool
+        </div>
+        <div class="dash-sf" id="dashForm"></div>
+      </div>
+      <div class="dash-simple-card">
+        <div class="dash-simple-card-hdr">
+          <i class="ph ph-package" style="font-size:15px"></i>
+          <span id="dashProdTitle">Your Listed Products (0)</span>
+        </div>
+        <div id="dashProdList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendor layout -->
+  <div id="dashVendor">
+    <!-- Overlay -->
+    <div class="vd-overlay" id="vdOverlay" onclick="vdCloseSidebar()"></div>
+    <div class="vd-shell">
+      <div class="vd-sidebar" id="vdSidebar"></div>
+      <div class="vd-main">
+        <!-- Mobile/Tablet: back + tabs (replaces hamburger) -->
+        <div class="vd-mob-header" id="vdMobHeader">
+          <button class="pd-back" onclick="closeDash()">
+            <i class="ph ph-arrow-left" style="font-size:15px"></i>
+            Back to listings
+          </button>
+          <div class="vd-tabs" id="vdTabs">
+            <button class="vd-tab on" data-section="overview" onclick="vdTabClick('overview',this)">Overview</button>
+            <button class="vd-tab" data-section="products" onclick="vdTabClick('products',this)">Products</button>
+            <button class="vd-tab" data-section="orders" onclick="vdTabClick('orders',this)">Orders</button>
+          </div>
+        </div>
+        <div class="vd-content" id="vdContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PROFILE PAGE ════ -->
+<div id="profilePage">
+  <div class="profile-wrap">
+
+    <button class="profile-back" onclick="closeProfile()">
+      <i class="ph ph-arrow-left" style="font-size:15px"></i>
+      Back
+    </button>
+
+    <div class="profile-layout">
+
+      <!-- Left: avatar card -->
+      <div class="profile-card-left">
+        <div class="profile-avatar-big" id="profileAv">
+          <span id="profileAvInitials">A</span>
+          <div class="profile-avatar-edit" onclick="document.getElementById('profileImgInput').click()" title="Change photo">
+            <i class="ph ph-pencil-simple" style="font-size:12px"></i>
+          </div>
+        </div>
+        <input type="file" id="profileImgInput" accept="image/*" style="display:none" onchange="handleProfileImg(this)"/>
+        <div class="profile-fullname" id="profileDisplayName">Ahmed Mohamed</div>
+        <span class="profile-role-badge" id="profileRoleBadge">
+          <i class="ph ph-graduation-cap" style="font-size:12px"></i>
+          Student
+        </span>
+        <div class="profile-uni" id="profileUniDisplay">
+          <i class="ph ph-buildings" style="font-size:13px"></i>
+          Mansoura University
+        </div>
+        <div class="profile-left-sep"></div>
+        <div class="profile-stat-row">
+          <div class="profile-stat-box">
+            <div class="profile-stat-num" id="profileListingsCount">0</div>
+            <div class="profile-stat-lbl">Listings</div>
+          </div>
+          <div class="profile-stat-box">
+            <div class="profile-stat-num" id="profileSavedCount">0</div>
+            <div class="profile-stat-lbl">Saved</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: form (rendered by JS based on role) -->
+      <div id="profileFormArea"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ AUTH MODAL ════ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal" id="authModalBox">
+    <div class="auth-modal-top">
+      <button class="logo" style="cursor:default;font-size:20px">talaba.</button>
+      <button class="auth-modal-x" onclick="closeAuthModal()">&#x2715;</button>
+    </div>
+    <div class="auth-modal-body" id="authModalBody"></div>
+  </div>
+</div>
+
+
+<!-- ════ FOOTER ════ -->
+<footer class="site-footer" id="siteFooter">
+  <div class="footer-inner">
+    <div class="footer-top">
+
+      <!-- Brand -->
+      <div>
+        <div class="footer-brand-logo">talaba.</div>
+        <p class="footer-brand-desc">The university marketplace for students and vendors across Mansoura and the Delta region. Buy, sell, and connect — all in one place.</p>
+        <div class="footer-unis">
+          <span class="footer-uni-badge">Mansoura University</span>
+          <span class="footer-uni-badge">Mansoura National</span>
+          <span class="footer-uni-badge">New Mansoura</span>
+          <span class="footer-uni-badge">Horus University</span>
+          <span class="footer-uni-badge">Delta University</span>
+          <span class="footer-uni-badge">Salab Institute</span>
+        </div>
+        <div class="footer-socials" style="margin-top:18px">
+          <!-- Facebook -->
+          <button class="footer-social-btn" title="Facebook">
+            <i class="ph ph-facebook-logo" style="font-size:16px"></i>
+          </button>
+          <!-- Instagram -->
+          <button class="footer-social-btn" title="Instagram">
+            <i class="ph ph-instagram-logo" style="font-size:16px"></i>
+          </button>
+          <!-- WhatsApp -->
+          <button class="footer-social-btn" title="WhatsApp">
+            <i class="ph ph-whatsapp-logo" style="font-size:16px"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Marketplace -->
+      <div>
+        <div class="footer-col-title">Marketplace</div>
+        <div class="footer-links">
+          <button class="footer-link" onclick="showHome()">Browse Products</button>
+          <button class="footer-link" onclick="openWL()">Wishlist</button>
+          <button class="footer-link" onclick="openCart()">Cart</button>
+          <button class="footer-link" onclick="openAuthModal()">Sell on Talaba</button>
+        </div>
+      </div>
+
+      <!-- Account -->
+      <div>
+        <div class="footer-col-title">Account</div>
+        <div class="footer-links">
+          <button class="footer-link" onclick="openAuthModal()">Sign In</button>
+          <button class="footer-link" onclick="openAuthModal()">Register</button>
+          <button class="footer-link" onclick="window._authGetUser&&window._authGetUser()?openDashboard():openAuthModal()">Dashboard</button>
+          <button class="footer-link" onclick="window._authGetUser&&window._authGetUser()?openProfile():openAuthModal()">Profile</button>
+        </div>
+      </div>
+
+      <!-- Help -->
+      <div>
+        <div class="footer-col-title">Help</div>
+        <div class="footer-links">
+          <button class="footer-link">How it Works</button>
+          <button class="footer-link">Safety Tips</button>
+          <button class="footer-link">Contact Us</button>
+          <button class="footer-link">Report a Problem</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="footer-bottom">
+      <div class="footer-copy">
+        © 2025 talaba.
+        <span style="margin-left:12px">All rights reserved.</span>
+      </div>
+      <div class="footer-bottom-links">
+        <span class="footer-bottom-link">Privacy Policy</span>
+        <span class="footer-bottom-link">Terms of Use</span>
+        <span class="footer-bottom-link">Cookie Policy</span>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+<!-- Mobile search overlay -->
+<div id="mobSearchOverlay" style="display:none;position:fixed;top:0;left:0;right:0;z-index:600;background:var(--hdr-bg);border-bottom:1px solid var(--border);padding:12px 16px;gap:10px">
+  <input id="mobSearchInput" type="text" placeholder="Search products..." style="flex:1;padding:9px 14px;background:var(--input-bg);border:1px solid var(--border);border-radius:999px;font-family:var(--font);font-size:14px;color:var(--text);outline:none" oninput="F.search=this.value.toLowerCase();applyFilters()"/>
+  <button onclick="closeMobSearch()" style="background:none;border:none;font-family:var(--font);font-size:13px;font-weight:700;color:#334fef;cursor:pointer;padding:0;white-space:nowrap">Cancel</button>
+</div>
+
+<!-- ════ ORDER SUCCESS POPUP ════ -->
+<div class="order-success-overlay" id="orderSuccessOverlay">
+  <div class="order-success-box">
+    <div class="order-success-ring">
+      <i class="ph-fill ph-check-circle" style="font-size:40px;color:#334fef"></i>
+    </div>
+    <h2 class="order-success-title">Order Placed!</h2>
+    <p class="order-success-msg">Your order has been confirmed.<br>You'll receive updates soon.</p>
+    <button class="co-btn-main order-success-btn" onclick="closeOrderSuccess()">Continue Shopping</button>
+  </div>
+</div>
+    <script src="script.js"></script>
+
+    <!-- في الآخر بعد script.js -->
+<script src="banner.js"></script>
+
+</body>
+</html>
